@@ -3,14 +3,18 @@ import { saveToFile } from '../utils/fileUtils'
 import { bufferToHexString, decToHexString, hexStringToBuffer, calculateChecksum, addByteToBuffer } from '../utils/hexUtils';
 
 export default class CmdSerialHandler {
-    constructor(cmdSerialMonitorRef, cardMonitorRef, cardHandle) {
+    constructor(cmdSerialMonitorRef, cardHandler, cardMonitorRef) {
         this.cmdSerialMonitorRef = cmdSerialMonitorRef
         this.cardMonitorRef = cardMonitorRef
-        this.cardHandle = cardHandle
+        this.cardHandler = cardHandler
         this.cmdSerialHandle = null
         this.cmdSerialBuffer = []
         this.fileData = new Uint8Array()
         this.filename = ''
+        this.eventListeners = {
+            authenticationComplete: [],
+            downloadComplete: []
+        }
     }
 
     async connect() {
@@ -57,6 +61,9 @@ export default class CmdSerialHandler {
             case 0xA1:
                 await this.handleA1Command(payload)
                 break
+            case 0xA2:
+                await this.handleA2Command(payload)
+                break
             case 0xB0:
                 await this.handleB0Command()
                 break
@@ -69,11 +76,39 @@ export default class CmdSerialHandler {
     async handleA1Command(payload) {
         let command = bufferToHexString(payload)
         this.cardMonitorRef?.addData(`->: ${command}`, 'tx')
-        const response = await this.cardHandle.sendRequest(command, 0)
+        const response = await this.cardHandler.sendRequest(command, 0)
         const responsePayload = hexStringToBuffer(response)
         this.cardMonitorRef?.addData(`<-: ${bufferToHexString(responsePayload)}`, 'rx')
         const buffer = await this.write(0x21, responsePayload)
         this.cmdSerialMonitorRef?.addData(`->: ${bufferToHexString(buffer)}`, 'tx')
+    }
+
+    // Aggiungi questo nuovo metodo per gestire gli eventi
+    on(eventName, callback) {
+        if (this.eventListeners[eventName]) {
+            this.eventListeners[eventName].push(callback)
+        }
+    }
+
+    // Aggiungi questo nuovo metodo per emettere eventi
+    emit(eventName, data) {
+        if (this.eventListeners[eventName]) {
+            this.eventListeners[eventName].forEach(callback => callback(data))
+        }
+    }
+    async handleA2Command(payload) {
+        if (payload.length > 1) {
+            switch (payload[0]) {
+                case 0x40:
+                    this.cmdSerialMonitorRef?.addData(`Autenticazione conclusa`, '')
+                    this.emit('authenticationComplete', payload[1])
+                    break;
+                case 0x80:
+                    this.cmdSerialMonitorRef?.addData(`Download concluso`, '')
+                    this.emit('downloadComplete', payload[1])
+                    break;
+            }
+        }
     }
 
     async handleB0Command() {

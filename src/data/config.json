@@ -22,7 +22,7 @@
       "id": 4,
       "name": "<b>Download TCO</b>",
       "command": "20",
-      "data": "01 00 F1 C4 67 80 42 C6 67 12 3B F8 96 00 00 80 31 FE 47 00 73 C8 40 00 00 90 00 0D"
+      "data": "77 00 F1 C4 67 80 42 C6 67 12 3B F8 96 00 00 80 31 FE 47 00 73 C8 40 00 00 90 00 0D"
     },
     {
       "id": 4,
@@ -41,6 +41,30 @@
       "name": "<b>Download mass file</b>",
       "command": "31",
       "data": "00 FF 00 00 00"
+    },
+    {
+      "id": 8,
+      "name": "<b>Get PARAM_TCO_TX_ID_REALTIME</b>",
+      "command": "13",
+      "data": "00 00 00 00"
+    },
+    {
+      "id": 9,
+      "name": "<b>Set PARAM_TCO_TX_ID_REALTIME = 0x0CDAEEF0</b>",
+      "command": "14",
+      "data": "00 00 00 00 0C DA EE F0"
+    },
+    {
+      "id": 10,
+      "name": "<b>Save Setup</b>",
+      "command": "15",
+      "data": "00 00 00 00"
+    },
+    {
+      "id": 11,
+      "name": "<b>Restore Setup</b>",
+      "command": "16",
+      "data": "00 00 00 00"
     }
   ],
   "cardManager": {

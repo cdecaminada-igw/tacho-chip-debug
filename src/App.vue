@@ -28,6 +28,25 @@ let selectedCard = ref(
     : null
 )
 
+const showCardMonitor = ref(localStorage.getItem('showCardMonitor') !== 'false')
+const showCmdMonitor = ref(localStorage.getItem('showCmdMonitor') !== 'false')
+const showDbgMonitor = ref(localStorage.getItem('showDbgMonitor') !== 'false')
+
+// Funzione per aggiornare localStorage quando cambia la visibilità
+const updateMonitorVisibility = (monitorName, value) => {
+  localStorage.setItem(monitorName, value)
+}
+
+// Funzione per cancellare localStorage
+const clearLocalStorage = () => {
+  localStorage.clear()
+  // Ripristina i valori di default
+  showCardMonitor.value = true
+  showCmdMonitor.value = true
+  showDbgMonitor.value = true
+  selectedCard.value = null
+}
+
 import config from './data/config.json'
 import { hexStringToBuffer } from './utils/hexUtils.js';
 
@@ -47,7 +66,7 @@ const handleCardSelected = async (card) => {
   selectedCard.value = card
   localStorage.setItem('lastCard', JSON.stringify(card));
   if (cardConnected.value) {
-    await handleCardDisconnect()
+    handleCardDisconnect()
   }
 }
 
@@ -74,7 +93,12 @@ const handleDbgSerialDisconnect = async () => {
 
 const handleCmdSerialConnect = async () => {
   try {
-    cmdSerialHandler.value = new CmdSerialHandler(cmdSerialMonitorRef, cardMonitorRef, cardHandle)
+    cmdSerialHandler.value = new CmdSerialHandler(cmdSerialMonitorRef, cardHandle, cardMonitorRef)
+    cmdSerialHandler.value.on('authenticationComplete', (success) => {
+      handleCardDisconnect()
+    })
+    cmdSerialHandler.value.on('downloadComplete', (success) => {
+    })
     await cmdSerialHandler.value.connect()
     cmdSerialConnected.value = true
   } catch (error) {
@@ -121,9 +145,34 @@ const handleCardDisconnect = async () => {
 
 <template>
   <div class="app-container">
+    <div class="sidebar">
+      <div class="toggle-buttons">
+        <button class="toggle-button" :class="{ active: showCardMonitor }"
+          @click="showCardMonitor = !showCardMonitor; updateMonitorVisibility('showCardMonitor', showCardMonitor)">
+          Card Monitor
+        </button>
+        <button class="toggle-button" :class="{ active: showCmdMonitor }"
+          @click="showCmdMonitor = !showCmdMonitor; updateMonitorVisibility('showCmdMonitor', showCmdMonitor)">
+          Serial Monitor
+        </button>
+        <button class="toggle-button" :class="{ active: showDbgMonitor }"
+          @click="showDbgMonitor = !showDbgMonitor; updateMonitorVisibility('showDbgMonitor', showDbgMonitor)">
+          Debug Monitor
+        </button>
+      </div>
+
+      <!-- Aggiungi il pulsante per cancellare localStorage -->
+      <button class="clear-storage-button" @click="clearLocalStorage" title="Ripristina Impostazion">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor">
+          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+        </svg>
+      </button>
+    </div>
     <div class="main-content">
+
       <div class="monitors-container">
-        <div class="monitor-wrapper">
+        <div class="monitor-wrapper" v-show="showCardMonitor">
           <div class="button-container">
 
             <button class="connect-button" v-if="!cardConnected" @click="handleCardConnect" title="Connetti smartcard">
@@ -158,7 +207,7 @@ const handleCardDisconnect = async () => {
           </div>
           <CardMonitor ref="cardMonitorRef" />
         </div>
-        <div class="monitor-wrapper">
+        <div class="monitor-wrapper" v-show="showCmdMonitor">
           <div class="button-container">
 
             <button class="connect-button" v-if="!cmdSerialConnected" @click="handleCmdSerialConnect"
@@ -195,7 +244,7 @@ const handleCardDisconnect = async () => {
           <CmdSerialMonitor ref="cmdSerialMonitorRef" />
         </div>
 
-        <div class="monitor-wrapper">
+        <div class="monitor-wrapper" v-show="showDbgMonitor">
           <div class="button-container">
 
             <button class="connect-button" v-if="!dbgSerialConnected" @click="handleDbgSerialConnect"
@@ -246,7 +295,8 @@ const handleCardDisconnect = async () => {
 }
 
 .sidebar {
-  width: 250px;
+  display: flex;
+  flex-direction: column;
   padding: 1rem;
   border-right: 1px solid #ddd;
   height: 100%;
@@ -325,6 +375,8 @@ const handleCardDisconnect = async () => {
   display: flex;
   gap: 8px;
   margin-bottom: .1rem;
+  flex-shrink: 0;
+  /* Impedisce al container dei pulsanti di ridursi */
 }
 
 .clear-button {
@@ -354,16 +406,53 @@ const handleCardDisconnect = async () => {
   height: 16px;
 }
 
+.clear-storage-button {
+  width: 100%;
+  padding: 8px;
+  margin-top: auto;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.3s;
+}
+
+.clear-storage-button:hover {
+  background-color: #c82333;
+}
+
+.clear-storage-button:active {
+  background-color: #bd2130;
+}
+
+.clear-storage-button svg {
+  width: 16px;
+  height: 16px;
+}
+
 .monitors-container {
   height: 100%;
   display: flex;
   gap: 1rem;
+  flex-wrap: wrap;
+  overflow: hidden;
+  /* Impedisce lo scroll del container principale */
 }
 
 .monitor-wrapper {
   flex: 1;
+  min-width: 300px;
   display: flex;
   flex-direction: column;
+  max-height: calc(100vh - 2rem);
+  /* Altezza massima con margine */
+  overflow: hidden;
+  /* Nasconde lo scroll del wrapper */
 }
 
 .monitor-title {
@@ -383,5 +472,52 @@ const handleCardDisconnect = async () => {
 
 .monitor-title.no-padding {
   padding: 0;
+}
+
+.toggle-buttons {
+  display: flex;
+  flex-direction: column;
+  /* Cambiato da row a column */
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.toggle-button {
+  padding: 16px 8px;
+  /* Invertiti i valori del padding */
+  border: 1px solid #4281b8;
+  border-radius: 4px;
+  background-color: white;
+  color: #4281b8;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  writing-mode: vertical-lr;
+  /* Rende il testo verticale */
+  transform: rotate(180deg);
+  /* Ruota il testo per la corretta direzione di lettura */
+  text-align: center;
+  min-height: 120px;
+  /* Aggiungi un'altezza minima */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toggle-button:hover {
+  background-color: #f0f9f6;
+}
+
+.toggle-button.active {
+  background-color: #4281b8;
+  color: white;
+}
+
+/* Aggiungi questa classe per il componente monitor interno */
+:deep(.monitor-content) {
+  flex: 1;
+  overflow-y: auto;
+  /* Abilita lo scroll verticale */
+  overflow-x: hidden;
+  /* Nasconde lo scroll orizzontale */
 }
 </style>

@@ -41,6 +41,9 @@ export function bufferToString(buffer) {
                 return String.fromCharCode(byte);
             }
             // Sostituisci caratteri non stampabili con un punto
+            if ((byte === 0x0d) || (byte === 0x0a)) {
+                return ' ';
+            }
             return '.';
         })
         .join('');
