@@ -15,6 +15,7 @@ export default class CmdSerialHandler {
             authenticationComplete: [],
             downloadComplete: []
         }
+        this.responseResolve = null;
     }
 
     async connect() {
@@ -69,6 +70,11 @@ export default class CmdSerialHandler {
                 break
             case 0xB1:
                 await this.handleB1Command(payload)
+                break
+            case 0xF1:
+            case 0xF2:
+            case 0xF3:
+                await this.handleResponseCommand(command, payload)
                 break
         }
     }
@@ -130,13 +136,106 @@ export default class CmdSerialHandler {
         this.cmdSerialMonitorRef?.addData(`${this.filename} aggiornato ${this.fileData.length} bytes`, '')
     }
 
+    async handleResponseCommand(command, payload) {
+        if (this.responseResolve) {
+            this.responseResolve(payload[payload.length - 1] == 0x01);
+        }
+    }
+
+    async waitForResponse(timeout = 10000) {
+        // Creiamo una nuova Promise per ogni chiamata
+        return new Promise((resolve) => {
+            const timeoutId = setTimeout(() => {
+                this.responseResolve = null; // Reset della Promise
+                resolve(false);
+            }, timeout);
+
+            this.responseResolve = (result) => {
+                clearTimeout(timeoutId); // Annulla il timeout
+                this.responseResolve = null; // Reset della Promise
+                resolve(result);
+            };
+        });
+    }
+
     async write(command, payload) {
         const hexString = bufferToHexString(payload);
-        const text = '55 ' + decToHexString(command) + ' ' + decToHexString(payload.length) + ' 00 ' + hexString;
+        const text = '55 ' + decToHexString(command) + ' ' + decToHexString(payload.length & 0xFF) + ' ' + decToHexString(payload.length >> 8) + ' ' + hexString;
         let cmdBuffer = hexStringToBuffer(text);
         const checksum = calculateChecksum(cmdBuffer);
         cmdBuffer = addByteToBuffer(cmdBuffer, checksum);
         this.cmdSerialMonitorRef?.addData(`->: ${bufferToHexString(cmdBuffer)}`, 'tx');
         return await this.cmdSerialHandle.write(cmdBuffer);
+    }
+
+    async sendTachoChipApp() {
+        try {
+            const response = await fetch('/src/data/tacho-chip.bin');
+            const fileBuffer = await response.arrayBuffer();
+            const data = new Uint8Array(fileBuffer);
+
+            let sequence = 0;
+
+            // Invia il comando iniziale
+            let payload = new Uint8Array(8);
+            payload[0] = 0x50;
+            payload[1] = 0x49;
+            payload[2] = 0x48;
+            payload[3] = 0x43;
+            payload[4] = data.length & 0xFF;
+            payload[5] = (data.length >> 8) & 0xFF;
+            payload[6] = (data.length >> 16) & 0xFF;
+            payload[7] = (data.length >> 24) & 0xFF;
+            await this.write(0x72, payload);
+
+            // Attendi la risposta F2 per 10 secondi
+            const initialResponse = await this.waitForResponse();
+            if (!initialResponse) {
+                this.cmdSerialMonitorRef?.addData(`Timeout nella risposta iniziale`, '');
+                return false;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            for (let offset = 0; offset < data.length; offset += 1024) {
+                const blockSize = Math.min(1024, data.length - offset);
+                const payload = new Uint8Array(4 + blockSize);
+
+                payload[0] = sequence & 0xFF;
+                payload[1] = (sequence >> 8) & 0xFF;
+                payload[2] = (sequence >> 16) & 0xFF;
+                payload[3] = (sequence >> 24) & 0xFF;
+                payload.set(data.slice(offset, offset + blockSize), 4);
+
+                await this.write(0x73, payload);
+
+                // Attendi la risposta F3 per ogni blocco
+                const blockResponse = await this.waitForResponse();
+                if (!blockResponse) {
+                    this.cmdSerialMonitorRef?.addData(`Timeout nella risposta del blocco ${sequence}`, '');
+                    return false;
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                sequence++;
+            }
+
+            this.cmdSerialMonitorRef?.addData(`File tacho-chip.bin inviato completamente`, '');
+            payload = new Uint8Array(4);
+            payload[0] = 0x50;
+            payload[1] = 0x49;
+            payload[2] = 0x48;
+            payload[3] = 0x43;
+            await this.write(0x71, payload);
+            const finalResponse = await this.waitForResponse();
+            if (!finalResponse) {
+                this.cmdSerialMonitorRef?.addData(`Timeout nella risposta finale`, '');
+                return false;
+            }
+
+            return true;
+        } catch (error) {
+            this.cmdSerialMonitorRef?.addData(`Errore nell'invio del file: ${error.message}`, '');
+            return false;
+        }
     }
 }

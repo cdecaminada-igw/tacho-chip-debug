@@ -52,7 +52,7 @@
       "id": 9,
       "name": "<b>Set PARAM_TCO_TX_ID_REALTIME = 0x0CDAEEF0</b>",
       "command": "14",
-      "data": "00 00 00 00 0C DA EE F0"
+      "data": "00 00 00 00 F0 EE DA 0C"
     },
     {
       "id": 10,
@@ -65,6 +65,24 @@
       "name": "<b>Restore Setup</b>",
       "command": "16",
       "data": "00 00 00 00"
+    },
+    {
+      "id": 12,
+      "name": "<b>Start Boot</b>",
+      "command": "70",
+      "data": "54 4F 4F 42"
+    },
+    {
+      "id": 13,
+      "name": "<b>Start App</b>",
+      "command": "71",
+      "data": "50 49 48 43"
+    },
+    {
+      "id": 14,
+      "name": "<b>Update Firmware</b>",
+      "command": "sendTachoChipApp",
+      "data": ""
     }
   ],
   "cardManager": {

@@ -56,6 +56,10 @@ const handleItemSelected = async (item) => {
     return
   }
   try {
+    if (item.command === 'sendTachoChipApp') {
+      await cmdSerialHandler.value.sendTachoChipApp()
+      return
+    }
     await cmdSerialHandler.value.write(item.command, hexStringToBuffer(item.data))
   } catch (error) {
     console.error(error)
