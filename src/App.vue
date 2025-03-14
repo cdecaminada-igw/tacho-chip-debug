@@ -47,7 +47,7 @@ const clearLocalStorage = () => {
   selectedCard.value = null
 }
 
-import config from './data/config.json'
+import config from '/data/config.json'
 import { hexStringToBuffer } from './utils/hexUtils.js';
 
 const handleItemSelected = async (item) => {

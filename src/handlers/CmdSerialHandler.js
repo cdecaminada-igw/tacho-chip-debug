@@ -170,7 +170,7 @@ export default class CmdSerialHandler {
 
     async sendTachoChipApp() {
         try {
-            const response = await fetch('/src/data/tacho-chip.bin');
+            const response = await fetch('/data/tacho-chip.bin');
             const fileBuffer = await response.arrayBuffer();
             const data = new Uint8Array(fileBuffer);
 

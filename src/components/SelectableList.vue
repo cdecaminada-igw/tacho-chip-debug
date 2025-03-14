@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import itemsData from '../data/config.json'
+import itemsData from '/data/config.json'
 
 const items = ref([])
 const selectedItem = ref(null)

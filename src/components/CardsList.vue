@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-import config from '../data/config.json'
+import config from '/data/config.json'
 
 const cards = ref([])
 const props = defineProps({
