@@ -3,7 +3,11 @@ import { ref } from 'vue'
 import { vAutoScroll } from '../directives/autoScroll'
 
 const props = defineProps({
-    cardHandler: {
+    showTimestamp: {
+        type: Boolean,
+        default: true
+    },
+    serialHandler: {
         type: Object,
         default: null
     },
@@ -14,12 +18,14 @@ const props = defineProps({
 })
 
 const connected = ref(false)
-const emit = defineEmits(['connection-change'])
+const rtsEnabled = ref(false)
+const dtrEnabled = ref(false)
+const emit = defineEmits(['connection-change', 'rts-change', 'dtr-change'])
 
-const cardData = ref([])
+const serialData = ref([])
 
 const addData = (data, direction = '') => {
-    cardData.value.push({
+    serialData.value.push({
         id: Date.now(),
         timestamp: new Date().toLocaleTimeString(),
         content: data,
@@ -28,39 +34,46 @@ const addData = (data, direction = '') => {
 }
 
 const clearData = () => {
-    cardData.value = []
+    serialData.value = []
 }
 
 const toggleConnection = async () => {
+    connected.value = !connected.value
     try {
-        if (props.cardHandler) {
-            if (!connected.value) {
-                if (props.cardHandler.getCard() === null) {
-                    props.cardHandler.monitorRef?.addData('Seleziona una smartcard', '')
-                } else if (await props.cardHandler.connect()) {
-                    connected.value = true
-                }
+        if (props.serialHandler) {
+            if (connected.value) {
+                await props.serialHandler.connect()
             } else {
-                await props.cardHandler.disconnect()
-                connected.value = false
+                await props.serialHandler.disconnect()
             }
         }
+        emit('connection-change', connected.value)
     } catch (error) {
-        connected.value = false
         console.error(error)
     }
-    emit('connection-change', connected.value)
 }
 
-const setConnection = async (status) => {
-    connected.value = status
+const toggleRTS = async () => {
+    rtsEnabled.value = !rtsEnabled.value
+    if (props.serialHandler) {
+        await props.serialHandler.setRTS(rtsEnabled.value)
+    }
+    emit('rts-change', rtsEnabled.value)
 }
 
-defineExpose({ addData, clearData, setConnection })
+const toggleDTR = async () => {
+    dtrEnabled.value = !dtrEnabled.value
+    if (props.serialHandler) {
+        await props.serialHandler.setDTR(dtrEnabled.value)
+    }
+    emit('dtr-change', dtrEnabled.value)
+}
+
+defineExpose({ addData, clearData })
 </script>
 
 <template>
-    <div class="card-monitor">
+    <div class="serial-monitor">
         <div class="monitor-header">
             <span class="monitor-title">{{ title }}</span>
             <div class="signal-controls">
@@ -72,6 +85,14 @@ defineExpose({ addData, clearData, setConnection })
                         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                     </svg>
                 </button>
+                <button class="signal-button" :class="{ active: rtsEnabled }" @click="toggleRTS"
+                    title="Request To Send">
+                    RTS
+                </button>
+                <button class="signal-button" :class="{ active: dtrEnabled }" @click="toggleDTR"
+                    title="Data Terminal Ready">
+                    DTR
+                </button>
                 <button class="signal-button clear-button" @click="clearData" title="Pulisci Serial monitor">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor">
@@ -82,8 +103,8 @@ defineExpose({ addData, clearData, setConnection })
             </div>
         </div>
         <div class="monitor-content" v-auto-scroll>
-            <div v-for="line in cardData" :key="line.id" class="monitor-line">
-                <span class="timestamp">{{ line.timestamp }}</span>
+            <div v-for="line in serialData" :key="line.id" class="monitor-line">
+                <span v-if="showTimestamp" class="timestamp">{{ line.timestamp }}</span>
                 <span :class="['content', line.direction]">{{ line.content }}</span>
             </div>
         </div>
@@ -91,7 +112,7 @@ defineExpose({ addData, clearData, setConnection })
 </template>
 
 <style scoped>
-.card-monitor {
+.serial-monitor {
     height: calc(100vh - 3rem);
     width: 100%;
     display: flex;
@@ -100,7 +121,7 @@ defineExpose({ addData, clearData, setConnection })
 
 .monitor-content {
     flex: 1;
-    background-color: #f5f5dc;
+    background-color: #4d4d4d;
     color: #fff;
     padding: 1rem;
     border-radius: 4px;

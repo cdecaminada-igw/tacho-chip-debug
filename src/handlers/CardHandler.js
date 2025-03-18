@@ -6,18 +6,27 @@ export default class CardHandler {
     card_session = null;
     sequence_number = null;
     response = null;
-    retry = 4
-    cardHost = ''
-    cardName = 0
-    cardGroup = 0
-    cardTag = ''
+    retry = 4;
+    cardHost = '';
+    monitorRef = null;
+    card = null;
 
-    constructor(cardHost, card, monitorRef) {
+    constructor(cardHost, monitorRef) {
         this.cardHost = cardHost
-        this.cardName = card.name
-        this.cardGroup = card.group
-        this.cardTag = card.tag
         this.monitorRef = monitorRef
+    }
+
+    async setCard(card) {
+        this.disconnect()
+        this.card = card
+        this.card_session = null
+        this.sequence_number = null
+        this.response = null
+        this.retry = 4
+    }
+
+    getCard() {
+        return this.card
     }
 
     async connect() {
@@ -25,7 +34,6 @@ export default class CardHandler {
             await this.getMySession()
             this.monitorRef.addData(`Session ${this.card_session._id} established`, '')
         } catch (error) {
-            console.log("connect", error)
             this.monitorRef.addData(error, '')
             throw error
         }
@@ -34,8 +42,10 @@ export default class CardHandler {
 
     async disconnect() {
         try {
-            await this.releaseCardSession()
-            this.monitorRef.addData(`Session released`, '')
+            if (await this.releaseCardSession()) {
+                this.monitorRef.addData(`Session released`, '')
+                this.monitorRef.setConnection(false)
+            }
         } catch (error) {
             this.monitorRef.addData(error, '')
             throw error
@@ -44,6 +54,8 @@ export default class CardHandler {
 
     async requestNewCardSession() {
         try {
+            if (!this.card)
+                return null
             const url = this.cardHost + "/cards/detain"
             const response = await fetch(url, {
                 method: 'POST',
@@ -51,8 +63,8 @@ export default class CardHandler {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    group: parseInt(this.cardGroup) || null,
-                    tag: this.cardTag || null,
+                    group: parseInt(this.card.group) || null,
+                    tag: this.card.tag || null,
                     timeout: 60
                 })
             })
@@ -104,12 +116,14 @@ export default class CardHandler {
 
     async sendRequest(apdu, sequence_number) {
         try {
-            let session = await this.getMySession()
-
+            /*let session = await this.getMySession()
             if (!session)
+                return null*/
+
+            if (!this.card_session)
                 return null
 
-            let res = await fetch(this.cardHost + "/hubs/" + session.hub + "/sessions/" + session.session, {
+            let res = await fetch(this.cardHost + "/hubs/" + this.card_session.hub + "/sessions/" + this.card_session.session, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -142,7 +156,7 @@ export default class CardHandler {
             let session = this.card_session;
 
             if (!session)
-                return null
+                return false
 
             await fetch(this.cardHost + "/hubs/" + session.hub + "/sessions/" + session.session, {
                 method: 'DELETE',
@@ -155,7 +169,7 @@ export default class CardHandler {
         } catch (error) {
             //logger.error(err.message)
             this.monitorRef.addData(error, '')
-            return null
+            return false
         }
     }
 

@@ -4,6 +4,11 @@ export function stringToHex(str) {
         .join(' ');
 }
 
+export function stringToBuffer(str) {
+    const encoder = new TextEncoder();
+    return encoder.encode(str);
+}
+
 export function hexToString(hex, padding = 2) {
     const hexString = String(hex);
     const bytes = hexString.replace(/0x/g, '')
@@ -20,6 +25,8 @@ export function calculateChecksum(buffer) {
 }
 
 export function hexStringToBuffer(hexString) {
+    if (!hexString)
+        return new Uint8Array();
     const cleanHex = hexString.replace(/0x/g, '').replace(/\s/g, '');
     const bytes = new Uint8Array(
         cleanHex.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []
@@ -42,7 +49,7 @@ export function bufferToString(buffer) {
             }
             // Sostituisci caratteri non stampabili con un punto
             if ((byte === 0x0d) || (byte === 0x0a)) {
-                return ' ';
+                return '';
             }
             return '.';
         })

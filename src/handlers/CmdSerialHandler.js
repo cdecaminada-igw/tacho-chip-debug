@@ -1,40 +1,47 @@
 import SerialHandler from './SerialHandler.js'
 import { saveToFile } from '../utils/fileUtils'
-import { bufferToHexString, decToHexString, hexStringToBuffer, calculateChecksum, addByteToBuffer } from '../utils/hexUtils';
+import { bufferToHexString, decToHexString, hexStringToBuffer, calculateChecksum, addByteToBuffer, bufferToString } from '../utils/hexUtils';
 
-export default class CmdSerialHandler {
-    constructor(cmdSerialMonitorRef, cardHandler, cardMonitorRef) {
-        this.cmdSerialMonitorRef = cmdSerialMonitorRef
-        this.cardMonitorRef = cardMonitorRef
-        this.cardHandler = cardHandler
-        this.cmdSerialHandle = null
-        this.cmdSerialBuffer = []
-        this.fileData = new Uint8Array()
-        this.filename = ''
-        this.eventListeners = {
+export default class CmdSerialHandler extends SerialHandler {
+    cardHandler;
+    cmdSerialBuffer;
+    fileData;
+    filename;
+    events;
+    responseResolve;
+    buffer;
+
+    constructor(monitorRef, cardHandler) {
+        super('lastCmdSerialPort', monitorRef);
+
+        this.cardHandler = cardHandler;
+        this.cmdSerialBuffer = [];
+        this.fileData = new Uint8Array();
+        this.filename = '';
+
+        this.events = {
             authenticationComplete: [],
             downloadComplete: []
-        }
+        };
+
+        this.buffer = [];
         this.responseResolve = null;
     }
 
-    async connect() {
-        // Prova a recuperare l'ultima porta usata
-        const lastPortInfo = localStorage.getItem('lastCmdSerialPort');
-        this.cmdSerialHandle = new SerialHandler(lastPortInfo, this.cmdSerialMonitorRef)
-        await this.cmdSerialHandle.connect()
-        // Salva le informazioni della nuova porta
-        localStorage.setItem('lastCmdSerialPort', JSON.stringify(this.cmdSerialHandle.port.getInfo()));
-        this.cmdSerialHandle.onData(async (data) => {
-            await this.handleResponse(data)
-        })
+    // Metodi per la gestione degli eventi
+    on(eventName, callback) {
+        if (this.events[eventName]) {
+            this.events[eventName].push(callback);
+        }
     }
 
-    async disconnect() {
-        await this.cmdSerialHandle.disconnect()
+    emit(eventName, data) {
+        if (this.events[eventName]) {
+            this.events[eventName].forEach(callback => callback(data));
+        }
     }
 
-    async handleResponse(data) {
+    async onBinaryData(data) {
         this.cmdSerialBuffer.push(...data)
         while (this.cmdSerialBuffer.length >= 5) {
             if (this.cmdSerialBuffer[0] !== 0x55) {
@@ -47,12 +54,12 @@ export default class CmdSerialHandler {
             const payload = this.cmdSerialBuffer.slice(4, 4 + length)
             const checksum = this.cmdSerialBuffer[4 + length]
             const calculatedChecksum = calculateChecksum(this.cmdSerialBuffer.slice(0, 4 + length))
+            this.monitorRef?.addData(`<-: ${bufferToHexString(this.cmdSerialBuffer)}`, 'rx')
 
             if (checksum === calculatedChecksum) {
                 await this.handleCommand(command, payload)
             }
 
-            this.cmdSerialMonitorRef?.addData(`<-: ${bufferToHexString(this.cmdSerialBuffer)}`, 'rx')
             this.cmdSerialBuffer = this.cmdSerialBuffer.slice(5 + length)
         }
     }
@@ -81,36 +88,24 @@ export default class CmdSerialHandler {
 
     async handleA1Command(payload) {
         let command = bufferToHexString(payload)
-        this.cardMonitorRef?.addData(`->: ${command}`, 'tx')
+        this.cardHandler.monitorRef?.addData(`->: ${command}`, 'tx')
         const response = await this.cardHandler.sendRequest(command, 0)
         const responsePayload = hexStringToBuffer(response)
-        this.cardMonitorRef?.addData(`<-: ${bufferToHexString(responsePayload)}`, 'rx')
-        const buffer = await this.write(0x21, responsePayload)
-        this.cmdSerialMonitorRef?.addData(`->: ${bufferToHexString(buffer)}`, 'tx')
+        this.cardHandler.monitorRef?.addData(`<-: ${bufferToHexString(responsePayload)}`, 'rx')
+        const buffer = await this.writeCommand(0x21, responsePayload)
+        this.monitorRef?.addData(`->: ${bufferToHexString(buffer)}`, 'tx')
     }
 
-    // Aggiungi questo nuovo metodo per gestire gli eventi
-    on(eventName, callback) {
-        if (this.eventListeners[eventName]) {
-            this.eventListeners[eventName].push(callback)
-        }
-    }
-
-    // Aggiungi questo nuovo metodo per emettere eventi
-    emit(eventName, data) {
-        if (this.eventListeners[eventName]) {
-            this.eventListeners[eventName].forEach(callback => callback(data))
-        }
-    }
     async handleA2Command(payload) {
         if (payload.length > 1) {
             switch (payload[0]) {
                 case 0x40:
-                    this.cmdSerialMonitorRef?.addData(`Autenticazione conclusa`, '')
+                    this.monitorRef?.addData(`Autenticazione conclusa`, '')
                     this.emit('authenticationComplete', payload[1])
+                    this.cardHandler?.disconnect()
                     break;
                 case 0x80:
-                    this.cmdSerialMonitorRef?.addData(`Download concluso`, '')
+                    this.monitorRef?.addData(`Download concluso`, '')
                     this.emit('downloadComplete', payload[1])
                     break;
             }
@@ -124,7 +119,7 @@ export default class CmdSerialHandler {
         this.fileData = new Uint8Array()
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
         this.filename = `payload-${timestamp}.ddd`
-        this.cmdSerialMonitorRef?.addData(`File generato: ${this.filename}`, '')
+        this.monitorRef?.addData(`File generato: ${this.filename}`, '')
     }
 
     async handleB1Command(payload) {
@@ -133,7 +128,7 @@ export default class CmdSerialHandler {
         newBuffer.set(this.fileData)
         newBuffer.set(extractedPayload, this.fileData.length)
         this.fileData = newBuffer
-        this.cmdSerialMonitorRef?.addData(`${this.filename} aggiornato ${this.fileData.length} bytes`, '')
+        this.monitorRef?.addData(`${this.filename} aggiornato ${this.fileData.length} bytes`, '')
     }
 
     async handleResponseCommand(command, payload) {
@@ -158,14 +153,14 @@ export default class CmdSerialHandler {
         });
     }
 
-    async write(command, payload) {
+    async writeCommand(command, payload) {
+        this.isText = false
         const hexString = bufferToHexString(payload);
         const text = '55 ' + decToHexString(command) + ' ' + decToHexString(payload.length & 0xFF) + ' ' + decToHexString(payload.length >> 8) + ' ' + hexString;
         let cmdBuffer = hexStringToBuffer(text);
         const checksum = calculateChecksum(cmdBuffer);
         cmdBuffer = addByteToBuffer(cmdBuffer, checksum);
-        this.cmdSerialMonitorRef?.addData(`->: ${bufferToHexString(cmdBuffer)}`, 'tx');
-        return await this.cmdSerialHandle.write(cmdBuffer);
+        return await this.writeBinary(cmdBuffer);
     }
 
     async sendTachoChipApp() {
@@ -186,12 +181,12 @@ export default class CmdSerialHandler {
             payload[5] = (data.length >> 8) & 0xFF;
             payload[6] = (data.length >> 16) & 0xFF;
             payload[7] = (data.length >> 24) & 0xFF;
-            await this.write(0x72, payload);
+            await this.writeCommand(0x72, payload);
 
             // Attendi la risposta F2 per 10 secondi
             const initialResponse = await this.waitForResponse();
             if (!initialResponse) {
-                this.cmdSerialMonitorRef?.addData(`Timeout nella risposta iniziale`, '');
+                this.monitorRef?.addData(`Timeout nella risposta iniziale`, '');
                 return false;
             }
             await new Promise(resolve => setTimeout(resolve, 100));
@@ -211,7 +206,7 @@ export default class CmdSerialHandler {
                 // Attendi la risposta F3 per ogni blocco
                 const blockResponse = await this.waitForResponse();
                 if (!blockResponse) {
-                    this.cmdSerialMonitorRef?.addData(`Timeout nella risposta del blocco ${sequence}`, '');
+                    this.monitorRef?.addData(`Timeout nella risposta del blocco ${sequence}`, '');
                     return false;
                 }
                 await new Promise(resolve => setTimeout(resolve, 100));
@@ -219,7 +214,7 @@ export default class CmdSerialHandler {
                 sequence++;
             }
 
-            this.cmdSerialMonitorRef?.addData(`File tacho-chip.bin inviato completamente`, '');
+            this.monitorRef?.addData(`File tacho-chip.bin inviato completamente`, '');
             payload = new Uint8Array(4);
             payload[0] = 0x50;
             payload[1] = 0x49;
@@ -228,13 +223,13 @@ export default class CmdSerialHandler {
             await this.write(0x71, payload);
             const finalResponse = await this.waitForResponse();
             if (!finalResponse) {
-                this.cmdSerialMonitorRef?.addData(`Timeout nella risposta finale`, '');
+                this.monitorRef?.addData(`Timeout nella risposta finale`, '');
                 return false;
             }
 
             return true;
         } catch (error) {
-            this.cmdSerialMonitorRef?.addData(`Errore nell'invio del file: ${error.message}`, '');
+            this.monitorRef?.addData(`Errore nell'invio del file: ${error.message}`, '');
             return false;
         }
     }
