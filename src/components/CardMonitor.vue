@@ -92,7 +92,7 @@ defineExpose({ addData, clearData, setConnection })
 
 <style scoped>
 .card-monitor {
-    height: calc(100vh - 3rem);
+    height: calc(100vh - 3.5rem);
     width: 100%;
     display: flex;
     flex-direction: column;
@@ -100,10 +100,9 @@ defineExpose({ addData, clearData, setConnection })
 
 .monitor-content {
     flex: 1;
-    background-color: #f5f5dc;
-    color: #fff;
+    background-color: #f0f0dc;
     padding: 1rem;
-    border-radius: 4px;
+    border-radius: 0 0 4px 4px;
     font-family: monospace;
     overflow-y: auto;
     text-align: left;
@@ -131,12 +130,23 @@ defineExpose({ addData, clearData, setConnection })
     color: red;
 }
 
+.monitor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #333;
+    border-radius: 4px 4px 0 0;
+    padding: 8px;
+}
+
+.monitor-title {
+    color: #fff;
+    font-weight: bold;
+}
+
 .signal-controls {
     display: flex;
     gap: 8px;
-    padding: 8px;
-    background-color: #333;
-    border-radius: 4px 4px 0 0;
 }
 
 .signal-button {
@@ -160,23 +170,5 @@ defineExpose({ addData, clearData, setConnection })
     background-color: #42b883;
     color: white;
     border-color: #42b883;
-}
-
-.monitor-content {
-    border-radius: 0 0 4px 4px;
-}
-
-.clear-button {
-    align-items: center;
-    justify-content: center;
-}
-
-.clear-button:hover {
-    background-color: #c82333;
-    color: white;
-}
-
-.clear-button:active {
-    background-color: #bd2130;
 }
 </style>

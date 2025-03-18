@@ -186,25 +186,20 @@ const handleDbgSelected = async (item) => {
   display: flex;
   height: 100%;
   width: 100%;
-  margin: 0;
-  padding: 0;
 }
 
 .sidebar {
   display: flex;
   flex-direction: column;
   padding: 1rem;
-  border-right: 1px solid #ddd;
+  border-right: 1px solid #777;
   height: 100%;
-  overflow-y: auto;
 }
 
 .main-content {
   flex: 1;
-  overflow-y: auto;
 }
 
-/* Container dei monitor */
 .monitors-container {
   height: 100%;
   display: flex;
@@ -216,12 +211,12 @@ const handleDbgSelected = async (item) => {
 .monitor-wrapper {
   flex: 1;
   min-width: 300px;
+  padding: 0.4rem;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-/* Pulsante clear storage */
 .clear-storage-button {
   width: 100%;
   padding: 8px;
@@ -235,7 +230,6 @@ const handleDbgSelected = async (item) => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: background-color 0.3s;
 }
 
 .clear-storage-button:hover {
@@ -247,7 +241,6 @@ const handleDbgSelected = async (item) => {
   height: 16px;
 }
 
-/* Toggle buttons nella sidebar */
 .toggle-buttons {
   display: flex;
   flex-direction: column;
@@ -262,10 +255,8 @@ const handleDbgSelected = async (item) => {
   background-color: white;
   color: #4281b8;
   cursor: pointer;
-  transition: all 0.3s ease;
   writing-mode: vertical-lr;
   transform: rotate(180deg);
-  text-align: center;
   min-height: 120px;
   display: flex;
   align-items: center;
@@ -281,7 +272,6 @@ const handleDbgSelected = async (item) => {
   color: white;
 }
 
-/* Container dei pulsanti */
 .button-container {
   display: flex;
   gap: 8px;

@@ -99,17 +99,6 @@ const handleSend = () => {
     box-shadow: 0 0 0 2px rgba(66, 184, 131, 0.2);
 }
 
-/* Stile per le opzioni */
-.item-select option {
-    padding: 8px;
-}
-
-/* Supporto per HTML nelle opzioni (non funziona in tutti i browser) */
-.item-select option:checked {
-    background-color: #42b883;
-    color: white;
-}
-
 .resend-button {
     padding: 8px;
     background-color: #42b883;
@@ -124,10 +113,6 @@ const handleSend = () => {
 
 .resend-button:hover {
     background-color: #3aa876;
-}
-
-.resend-button:active {
-    background-color: #359469;
 }
 
 .resend-button:disabled {
