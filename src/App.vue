@@ -19,6 +19,9 @@ const dbgSerialHandler = ref(null)
 const cardMonitor = ref(null)
 const cardHandler = ref(null)
 
+const canSerialMonitor = ref(null)
+const canSerialHandler = ref(null)
+
 const mecFleetCommands = ref([])
 const tachoChipCommands = ref([])
 const cards = ref([])
@@ -33,6 +36,7 @@ let selectedCard = ref(
 const showCardMonitor = ref(localStorage.getItem('showCardMonitor') !== 'false')
 const showCmdMonitor = ref(localStorage.getItem('showCmdMonitor') !== 'false')
 const showDbgMonitor = ref(localStorage.getItem('showDbgMonitor') !== 'false')
+const showCanMonitor = ref(localStorage.getItem('showCanMonitor') !== 'false')
 
 onMounted(() => {
   mecFleetCommands.value = itemsData.mecFleetCommands
@@ -54,6 +58,9 @@ onMounted(() => {
 
   /* dbgSerialHandler */
   dbgSerialHandler.value = new SerialHandler('lastDbgSerialPort', dbgSerialMonitor)
+
+  /* canSerialHandler */
+  canSerialHandler.value = new SerialHandler('lastCanSerialPort', canSerialMonitor)
 })
 
 // Funzione per aggiornare localStorage quando cambia la visibilità
@@ -65,9 +72,10 @@ const updateMonitorVisibility = (monitorName, value) => {
 const clearLocalStorage = () => {
   localStorage.clear()
   // Ripristina i valori di default
-  showCardMonitor.value = true
+  showCardMonitor.value = false
   showCmdMonitor.value = true
   showDbgMonitor.value = true
+  showCanMonitor.value = false
   selectedCard.value = null
 }
 
@@ -111,6 +119,14 @@ const handleDbgSelected = async (item) => {
   }
 }
 
+const handleCanSelected = async (item) => {
+  try {
+    await canSerialHandler.value.writeText(item.data)
+  } catch (error) {
+    console.error(error)
+  }
+}
+
 </script>
 
 <template>
@@ -130,6 +146,10 @@ const handleDbgSelected = async (item) => {
         <button class="toggle-button" :class="{ active: showDbgMonitor }"
           @click="showDbgMonitor = !showDbgMonitor; updateMonitorVisibility('showDbgMonitor', showDbgMonitor)">
           Debug Monitor
+        </button>
+        <button class="toggle-button" :class="{ active: showCanMonitor }"
+          @click="showCanMonitor = !showCanMonitor; updateMonitorVisibility('showCanMonitor', showCanMonitor)">
+          CAN Monitor
         </button>
       </div>
 
@@ -172,6 +192,16 @@ const handleDbgSelected = async (item) => {
             </div>
           </div>
           <SerialMonitor ref="dbgSerialMonitor" :serialHandler="dbgSerialHandler" :showTimestamp="false" />
+        </div>
+
+        <div class="monitor-wrapper" v-show="showCanMonitor">
+          <div class="button-container">
+            <div class="monitor-title no-padding">
+              <SelectableList @item-selected="handleCanSelected" @item-send="handleCanSelected"
+                defaultText="CAN TachoChip" :items="mecFleetCommands" :sendButton=true />
+            </div>
+          </div>
+          <SerialMonitor ref="canSerialMonitor" :serialHandler="canSerialHandler" :showTimestamp="false" />
         </div>
 
       </div>

@@ -161,7 +161,8 @@ class SerialHandler {
                 // Estrai la linea completa fino all'invio
                 const line = this.buffer.slice(0, newlineIndex)
                 // Mostra la linea nel monitor
-                this.monitorRef?.addData(`<-: ${bufferToString(line)}`, 'rx')
+                if (line.length > 0)
+                    this.monitorRef?.addData(`<-: ${bufferToString(line)}`, 'rx')
                 // Rimuovi dal buffer i dati già mostrati (incluso l'invio)
                 this.buffer = this.buffer.slice(newlineIndex + 1)
             }
