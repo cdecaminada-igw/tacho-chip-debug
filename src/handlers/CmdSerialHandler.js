@@ -54,7 +54,7 @@ export default class CmdSerialHandler extends SerialHandler {
             const payload = this.cmdSerialBuffer.slice(4, 4 + length)
             const checksum = this.cmdSerialBuffer[4 + length]
             const calculatedChecksum = calculateChecksum(this.cmdSerialBuffer.slice(0, 4 + length))
-            this.monitorRef?.addData(`<-: ${bufferToHexString(this.cmdSerialBuffer)}`, 'rx')
+            this.monitorRef?.addData(`${bufferToHexString(this.cmdSerialBuffer)}`, 'rx')
 
             if (checksum === calculatedChecksum) {
                 await this.handleCommand(command, payload)
@@ -88,12 +88,12 @@ export default class CmdSerialHandler extends SerialHandler {
 
     async handleA1Command(payload) {
         let command = bufferToHexString(payload)
-        this.cardHandler.monitorRef?.addData(`->: ${command}`, 'tx')
+        this.cardHandler.monitorRef?.addData(`${command}`, 'tx')
         const response = await this.cardHandler.sendRequest(command, 0)
         const responsePayload = hexStringToBuffer(response)
-        this.cardHandler.monitorRef?.addData(`<-: ${bufferToHexString(responsePayload)}`, 'rx')
+        this.cardHandler.monitorRef?.addData(`${bufferToHexString(responsePayload)}`, 'rx')
         const buffer = await this.writeCommand(0x21, responsePayload)
-        this.monitorRef?.addData(`->: ${bufferToHexString(buffer)}`, 'tx')
+        this.monitorRef?.addData(`${bufferToHexString(buffer)}`, 'tx')
     }
 
     async handleA2Command(payload) {

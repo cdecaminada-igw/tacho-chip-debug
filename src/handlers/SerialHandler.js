@@ -141,7 +141,7 @@ class SerialHandler {
         this.buffer.push(...data)
         const timeElapsed = Date.now() - this.lastDataTime;
         if (timeElapsed > 100) {
-            this.monitorRef?.addData(`<-: ${bufferToHexString(line)}`, 'rx')
+            this.monitorRef?.addData(`${bufferToHexString(line)}`, 'rx')
         }
         this.lastDataTime = Date.now();
     }
@@ -162,7 +162,7 @@ class SerialHandler {
                 const line = this.buffer.slice(0, newlineIndex)
                 // Mostra la linea nel monitor
                 if (line.length > 0)
-                    this.monitorRef?.addData(`<-: ${bufferToString(line)}`, 'rx')
+                    this.monitorRef?.addData(`${bufferToString(line)}`, 'rx')
                 // Rimuovi dal buffer i dati già mostrati (incluso l'invio)
                 this.buffer = this.buffer.slice(newlineIndex + 1)
             }
@@ -171,13 +171,13 @@ class SerialHandler {
 
     async writeText(text) {
         this.isText = true
-        this.monitorRef?.addData(`->: ${text}`, 'tx');
+        this.monitorRef?.addData(`${text}`, 'tx');
         return await this.write(stringToBuffer(text));
     }
 
     async writeBinary(binary) {
         this.isText = false
-        this.monitorRef?.addData(`->: ${bufferToHexString(binary)}`, 'tx');
+        this.monitorRef?.addData(`${bufferToHexString(binary)}`, 'tx');
         return await this.write(binary);
     }
 
