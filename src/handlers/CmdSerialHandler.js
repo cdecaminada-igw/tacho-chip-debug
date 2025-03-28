@@ -12,7 +12,7 @@ export default class CmdSerialHandler extends SerialHandler {
     buffer;
 
     constructor(monitorRef, cardHandler) {
-        super('lastCmdSerialPort', monitorRef);
+        super('cmdSerialPort', monitorRef);
 
         this.cardHandler = cardHandler;
         this.cmdSerialBuffer = [];

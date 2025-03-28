@@ -65,7 +65,9 @@ class SerialHandler {
             if (!('serial' in navigator)) {
                 return;
             }
-            if (this.lastPortInfo) {
+            if (window.electron) {
+                window.electron.send('port', this.portInfoName);
+            } else if (this.lastPortInfo) {
                 try {
                     // Prova a riconnettersi all'ultima porta
                     const ports = await navigator.serial.getPorts();

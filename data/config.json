@@ -1,6 +1,30 @@
 {
   "tachoChipCommands": [
     {
+      "id": 100,
+      "name": "<span style='color: #ddd'>Read Next Generic Event</span>",
+      "command": "17",
+      "data": "FF"
+    },
+    {
+      "id": 101,
+      "name": "<span style='color: #ddd'>Read Next Info Event</span>",
+      "command": "17",
+      "data": "00"
+    },
+    {
+      "id": 102,
+      "name": "<span style='color: #ddd'>Read Next Tachograph Event</span>",
+      "command": "17",
+      "data": "01"
+    },
+    {
+      "id": 103,
+      "name": "<span style='color: #ddd'>Read Next Fuel Event</span>",
+      "command": "17",
+      "data": "02"
+    },
+    {
       "id": 1,
       "name": "<span style='color: #ddd'>Read Timestamp</span>",
       "command": "10",
@@ -131,5 +155,10 @@
       { "id": 4, "name": "Manfreda", "group": "3342", "tag": "" },
       { "id": 5, "name": "Comauto", "group": "1828", "tag": "" }
     ]
+  },
+  "ports": {
+    "cmdSerialPort": "cu.usbserial-FT0EUIR9",
+    "dbgSerialPort": "cu.usbmodem1102",
+    "canSerialPort": "cu.usbserial-FT2HM75S"
   }
 }

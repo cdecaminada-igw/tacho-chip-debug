@@ -5,10 +5,21 @@ import CardMonitor from './components/CardMonitor.vue'
 import CardHandler from './handlers/CardHandler.js';
 import CmdSerialHandler from './handlers/CmdSerialHandler.js'
 import SerialHandler from './handlers/SerialHandler.js'
-import itemsData from '/data/config.json'
 import SerialMonitor from './components/SerialMonitor.vue'
 import config from '/data/config.json'
 import { hexStringToBuffer } from './utils/hexUtils.js';
+
+//const message = ref('Attendi...');
+
+onMounted(() => {
+  if (window.electron) {
+    window.electron.receive('reply', (data) => {
+      //message.value = data;
+      console.log(data);
+    });
+    window.electron.send('ping', 'Ciao da Vue!');
+  }
+});
 
 const cmdSerialMonitor = ref(null)
 const cmdSerialHandler = ref(null)
@@ -39,9 +50,9 @@ const showDbgMonitor = ref(localStorage.getItem('showDbgMonitor') !== 'false')
 const showCanMonitor = ref(localStorage.getItem('showCanMonitor') !== 'false')
 
 onMounted(() => {
-  mecFleetCommands.value = itemsData.mecFleetCommands
-  tachoChipCommands.value = itemsData.tachoChipCommands
-  cards.value = itemsData.cardManager.cards
+  mecFleetCommands.value = config.mecFleetCommands
+  tachoChipCommands.value = config.tachoChipCommands
+  cards.value = config.cardManager.cards
 
   /* cardHandler */
   cardHandler.value = new CardHandler(config.cardManager.host, cardMonitor)
@@ -57,10 +68,10 @@ onMounted(() => {
   */
 
   /* dbgSerialHandler */
-  dbgSerialHandler.value = new SerialHandler('lastDbgSerialPort', dbgSerialMonitor)
+  dbgSerialHandler.value = new SerialHandler('dbgSerialPort', dbgSerialMonitor)
 
   /* canSerialHandler */
-  canSerialHandler.value = new SerialHandler('lastCanSerialPort', canSerialMonitor)
+  canSerialHandler.value = new SerialHandler('canSerialPort', canSerialMonitor)
 })
 
 // Funzione per aggiornare localStorage quando cambia la visibilità
