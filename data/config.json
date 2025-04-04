@@ -139,6 +139,24 @@
       "name": "<b>Invio chilometri FMS</b>",
       "command": "",
       "data": "can8008000218FEC1EE00000190f103C5A4\r"
+    },
+    {
+      "id": 4,
+      "name": "<b>Invio Test FMS (F1)</b>",
+      "command": "",
+      "data": "can8008000218DAF1EE0123456789ABCDEF\r"
+    },
+    {
+      "id": 4,
+      "name": "<b>Invio Test FMS (F0)</b>",
+      "command": "",
+      "data": "can8008000218DAF1EE0123456789ABCDEF\r"
+    },
+    {
+      "id": 5,
+      "name": "<b>Invio Test Ruptela (F0)</b>",
+      "command": "",
+      "data": "UCIAO\r"
     }
   ],
   "cardManager": {
